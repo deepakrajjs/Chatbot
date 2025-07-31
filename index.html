@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chatbot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .chatbot-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 800px;
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .chatbot-header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .chatbot-header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #4ade80;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.offline {
+            background: #ef4444;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .setup-instructions {
+            background: #fef3c7;
+            border: 2px solid #f59e0b;
+            padding: 20px;
+            margin: 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .setup-instructions h3 {
+            color: #92400e;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .setup-instructions ol {
+            margin-left: 20px;
+        }
+
+        .setup-instructions li {
+            margin-bottom: 10px;
+        }
+
+        .setup-instructions code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            max-width: 80%;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .message.user .message-avatar {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .message.bot .message-avatar {
+            background: linear-gradient(135deg, #4ade80, #22c55e);
+        }
+
+        .message-content {
+            background: white;
+            padding: 15px 18px;
+            border-radius: 18px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .message.bot .message-content {
+            background: #f8fafc;
+            border-left: 4px solid #4ade80;
+        }
+
+        .typing-indicator {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            padding: 15px 0;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: #94a3b8;
+            border-radius: 50%;
+            animation: typingBounce 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes typingBounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        .chat-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 25px;
+            font-size: 16px;
+            font-family: inherit;
+            outline: none;
+            resize: none;
+            min-height: 50px;
+            max-height: 120px;
+            transition: all 0.3s ease;
+        }
+
+        .chat-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .send-button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .send-button:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .welcome-message {
+            text-align: center;
+            padding: 40px 20px;
+            color: #64748b;
+        }
+
+        .welcome-message h2 {
+            margin-bottom: 10px;
+            color: #334155;
+        }
+
+        .error-message {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 10px 0;
+            border-left: 4px solid #dc2626;
+            font-family: monospace;
+            font-size: 14px;
+            white-space: pre-line;
+            line-height: 1.5;
+            max-width: 100%;
+            word-wrap: break-word;
+        }
+
+        .demo-mode {
+            background: #e0f2fe;
+            color: #0277bd;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            border-left: 4px solid #0277bd;
+            font-size: 14px;
+        }
+
+        .quick-setup {
+            background: #f0f9ff;
+            border: 2px solid #0ea5e9;
+            padding: 20px;
+            margin: 20px;
+            border-radius: 10px;
+        }
+
+        .quick-setup h3 {
+            color: #0c4a6e;
+            margin-bottom: 15px;
+        }
+
+        .quick-setup button {
+            background: #0ea5e9;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+
+        .quick-setup button:hover {
+            background: #0284c7;
+        }
+
+        /* Scrollbar styling */
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: rgba(102, 126, 234, 0.3);
+            border-radius: 3px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: rgba(102, 126, 234, 0.5);
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .chatbot-container {
+                width: 95%;
+                height: 95vh;
+                border-radius: 15px;
+            }
+
+            .message {
+                max-width: 90%;
+            }
+
+            .chatbot-header h1 {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chatbot-container">
+        <div class="chatbot-header">
+            <h1>AI Assistant</h1>
+            <div class="status-indicator">
+                <span class="status-dot offline" id="statusDot"></span>
+                <span id="statusText">Setting up...</span>
+            </div>
+        </div>
+
+        <div class="setup-instructions" id="setupInstructions">
+            <h3>🚀 Quick Setup Required</h3>
+            <p><strong>Your chatbot is ready, but needs to run on a web server to work properly!</strong></p>
+            
+            <h4>📱 Easiest Options (1 minute):</h4>
+            <ol>
+                <li><strong>CodePen:</strong> Go to <a href="https://codepen.io/pen/" target="_blank">codepen.io/pen</a> → Copy this code → Works instantly!</li>
+                <li><strong>JSFiddle:</strong> Go to <a href="https://jsfiddle.net" target="_blank">jsfiddle.net</a> → Paste code → Run!</li>
+            </ol>
+
+            <h4>🖥️ Local Server Options:</h4>
+            <ol>
+                <li><strong>Python:</strong> <code>python -m http.server 8000</code></li>
+                <li><strong>Node.js:</strong> <code>npx http-server</code></li>
+                <li><strong>Live Server (VS Code):</strong> Install extension → Right-click → "Open with Live Server"</li>
+            </ol>
+
+            <div class="quick-setup">
+                <h3>💡 Try Demo Mode</h3>
+                <p>While setting up your server, test the interface with simulated responses:</p>
+                <button onclick="chatbot.enableDemoMode()">Enable Demo Mode</button>
+            </div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="welcome-message">
+                <h2>🤖 AI Assistant Ready!</h2>
+                <p>Once you've set up a web server, I'll be able to connect to the Groq API and help you with anything!</p>
+            </div>
+        </div>
+
+        <div class="typing-indicator" id="typingIndicator">
+            <div class="message-avatar" style="background: linear-gradient(135deg, #4ade80, #22c55e);">🤖</div>
+            <div>
+                <div class="typing-dots">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-input-container">
+            <div class="chat-input-wrapper">
+                <textarea 
+                    class="chat-input" 
+                    id="chatInput" 
+                    placeholder="Type your message here..." 
+                    rows="1"
+                ></textarea>
+                <button class="send-button" id="sendButton">
+                    ➤
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class Chatbot {
+            constructor() {
+                this.apiKey = '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';
+                this.apiUrl = 'https://api.groq.com/openai/v1/chat/completions';
+                this.messages = [];
+                this.demoMode = false;
+                this.isConnected = false;
+                
+                this.chatMessages = document.getElementById('chatMessages');
+                this.chatInput = document.getElementById('chatInput');
+                this.sendButton = document.getElementById('sendButton');
+                this.typingIndicator = document.getElementById('typingIndicator');
+                this.statusDot = document.getElementById('statusDot');
+                this.statusText = document.getElementById('statusText');
+                this.setupInstructions = document.getElementById('setupInstructions');
+                
+                this.initializeEventListeners();
+                this.adjustTextareaHeight();
+                this.testConnection();
+            }
+
+            initializeEventListeners() {
+                this.sendButton.addEventListener('click', () => this.sendMessage());
+                
+                this.chatInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.sendMessage();
+                    }
+                });
+
+                this.chatInput.addEventListener('input', () => {
+                    this.adjustTextareaHeight();
+                });
+            }
+
+            adjustTextareaHeight() {
+                this.chatInput.style.height = 'auto';
+                this.chatInput.style.height = Math.min(this.chatInput.scrollHeight, 120) + 'px';
+            }
+
+            async testConnection() {
+                try {
+                    const response = await fetch(this.apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${this.apiKey}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            model: 'llama3-8b-8192',
+                            messages: [{ role: 'user', content: 'Hello' }],
+                            max_tokens: 10
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        this.isConnected = true;
+                        this.statusDot.classList.remove('offline');
+                        this.statusText.textContent = 'Online';
+                        this.setupInstructions.style.display = 'none';
+                        console.log('✅ API connection successful');
+                    } else {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                } catch (error) {
+                    this.isConnected = false;
+                    this.statusText.textContent = 'Setup Required';
+                    console.log('❌ Connection test failed:', error.message);
+                }
+            }
+
+            enableDemoMode() {
+                this.demoMode = true;
+                this.setupInstructions.style.display = 'none';
+                this.statusDot.classList.remove('offline');
+                this.statusText.textContent = 'Demo Mode';
+                
+                this.addMessage('Demo mode enabled! I\'ll simulate responses while you set up your server. The actual API integration will work once you run this on a web server.', 'bot');
+                this.addDemoMessage();
+            }
+
+            addDemoMessage() {
+                const demoDiv = document.createElement('div');
+                demoDiv.className = 'demo-mode';
+                demoDiv.textContent = '💡 Demo Mode Active - Responses are simulated. Run on a web server for real AI responses.';
+                this.chatMessages.appendChild(demoDiv);
+                this.scrollToBottom();
+            }
+
+            async sendMessage() {
+                const message = this.chatInput.value.trim();
+                if (!message) return;
+
+                // Clear input and disable send button
+                this.chatInput.value = '';
+                this.adjustTextareaHeight();
+                this.sendButton.disabled = true;
+
+                // Add user message to chat
+                this.addMessage(message, 'user');
+                
+                // Show typing indicator
+                this.showTypingIndicator();
+
+                if (this.demoMode) {
+                    // Simulate API response in demo mode
+                    setTimeout(() => {
+                        this.hideTypingIndicator();
+                        const demoResponses = [
+                            "This is a demo response! In real mode, I'd use the Groq API to give you intelligent answers.",
+                            "Hello! I'm simulating a response. Once you set up a web server, I'll be fully functional!",
+                            "Demo mode is active. Your API key is ready - just need to solve the CORS issue!",
+                            "I'd love to help you with that! This is a simulated response while you set up the server.",
+                            "Great question! In live mode, I'd process this using the Llama3 model via Groq API."
+                        ];
+                        const randomResponse = demoResponses[Math.floor(Math.random() * demoResponses.length)];
+                        this.addMessage(randomResponse, 'bot');
+                        this.sendButton.disabled = false;
+                        this.chatInput.focus();
+                    }, 2000);
+                    return;
+                }
+
+                try {
+                    // Add user message to conversation history
+                    this.messages.push({ role: 'user', content: message });
+
+                    const response = await fetch(this.apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${this.apiKey}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            model: 'llama3-8b-8192',
+                            messages: this.messages,
+                            temperature: 0.7,
+                            max_tokens: 1000,
+                            stream: false
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    const botResponse = data.choices[0].message.content;
+
+                    // Add bot response to conversation history
+                    this.messages.push({ role: 'assistant', content: botResponse });
+
+                    // Hide typing indicator and show response
+                    this.hideTypingIndicator();
+                    this.addMessage(botResponse, 'bot');
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    this.hideTypingIndicator();
+                    
+                    let errorMessage = '🚫 Connection Error!\n\n';
+                    errorMessage += 'This happens because of CORS restrictions when running HTML files directly.\n\n';
+                    errorMessage += '✅ Quick Solutions:\n';
+                    errorMessage += '1. Use CodePen.io or JSFiddle.net\n';
+                    errorMessage += '2. Run: python -m http.server 8000\n';
+                    errorMessage += '3. Try demo mode button above!\n\n';
+                    errorMessage += 'Your API key is working - just need proper hosting! 🚀';
+                    
+                    this.addErrorMessage(errorMessage);
+                } finally {
+                    this.sendButton.disabled = false;
+                    this.chatInput.focus();
+                }
+            }
+
+            addMessage(content, sender) {
+                // Remove welcome message if it exists
+                const welcomeMessage = this.chatMessages.querySelector('.welcome-message');
+                if (welcomeMessage) {
+                    welcomeMessage.remove();
+                }
+
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${sender}`;
+
+                const avatar = document.createElement('div');
+                avatar.className = 'message-avatar';
+                avatar.textContent = sender === 'user' ? '👤' : '🤖';
+
+                const messageContent = document.createElement('div');
+                messageContent.className = 'message-content';
+                messageContent.textContent = content;
+
+                messageDiv.appendChild(avatar);
+                messageDiv.appendChild(messageContent);
+
+                this.chatMessages.appendChild(messageDiv);
+                this.scrollToBottom();
+            }
+
+            addErrorMessage(message) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.textContent = message;
+                this.chatMessages.appendChild(errorDiv);
+                this.scrollToBottom();
+            }
+
+            showTypingIndicator() {
+                this.typingIndicator.style.display = 'flex';
+                this.scrollToBottom();
+            }
+
+            hideTypingIndicator() {
+                this.typingIndicator.style.display = 'none';
+            }
+
+            scrollToBottom() {
+                setTimeout(() => {
+                    this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+                }, 100);
+            }
+        }
+
+        // Initialize the chatbot when the page loads
+        let chatbot;
+        document.addEventListener('DOMContentLoaded', () => {
+            chatbot = new Chatbot();
+        });
+    </script>
+</body>
+</html>

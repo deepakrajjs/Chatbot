@@ -1,6 +1,4 @@
-Here’s a complete README.md template you can use for your chatbot project using the Groq API. You can fill in or modify the sections as needed:
 
----
 
 # Chatbot Using Groq API
 

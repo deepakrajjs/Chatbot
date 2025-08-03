@@ -79,7 +79,7 @@ This project is licensed under the [MIT License](LICENSE).
 
 ## Contact
 
-For questions or feedback, open an issue or contact [yourname@email.com].
+For questions or feedback, open an issue or contact [deepakrajjs2909@gmail.com].
 
 ---
 
